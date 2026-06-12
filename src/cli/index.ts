@@ -20,6 +20,7 @@ function printUsage(): void {
   console.log();
   console.log(chalk.white("Commands:"));
   console.log("  chat              Start interactive chat (default)");
+  console.log("  tui               Start modern TUI interface");
   console.log("  gateway           Start gateway with messaging platforms");
   console.log("  rpc               Start RPC server for tool calling");
   console.log("  test-stream       Test LLM streaming connection");
@@ -110,7 +111,8 @@ async function main(): Promise<void> {
 
           try {
             process.stdout.write(chalk.cyan("\nAgent: "));
-            await agent.chat(trimmed);
+            const response = await agent.chat(trimmed);
+            process.stdout.write(response);
             console.log("\n");
           } catch (err) {
             console.error(chalk.red(`\nError: ${err instanceof Error ? err.message : err}\n`));
@@ -120,6 +122,15 @@ async function main(): Promise<void> {
       };
 
       ask();
+      break;
+    }
+
+    case "tui": {
+      const { startTUI } = await import("../tui/index.js");
+      startTUI({
+        model: args.includes("--model") ? args[args.indexOf("--model") + 1] : undefined,
+        provider: args.includes("--provider") ? args[args.indexOf("--provider") + 1] : undefined,
+      });
       break;
     }
 
