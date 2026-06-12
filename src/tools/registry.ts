@@ -31,10 +31,15 @@ const TOOLSETS: Record<string, ToolsetDefinition> = {
     tools: ["search_files"],
     includes: [],
   },
+  skills: {
+    description: "Skills management tools",
+    tools: ["skills_list", "skill_view", "skill_create", "skill_apply"],
+    includes: [],
+  },
   core: {
     description: "Core agent tools",
     tools: [],
-    includes: ["terminal", "file", "search"],
+    includes: ["terminal", "file", "search", "skills"],
   },
 };
 
