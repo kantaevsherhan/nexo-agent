@@ -1,0 +1,39 @@
+{
+  "name": "nexo-agent",
+  "version": "0.1.0",
+  "description": "Node.js/TypeScript agent inspired by Hermes Agent",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "nexo": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli/index.ts",
+    "start": "node dist/cli/index.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": ["agent", "llm", "ai", "typescript"],
+  "license": "MIT",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "dotenv": "^17.4.2",
+    "js-yaml": "^4.2.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.9.3",
+    "typescript": "^6.0.3"
+  }
+}
