@@ -20,6 +20,7 @@ function printUsage(): void {
   console.log();
   console.log(chalk.white("Commands:"));
   console.log("  chat              Start interactive chat (default)");
+  console.log("  gateway           Start gateway with messaging platforms");
   console.log("  test-stream       Test LLM streaming connection");
   console.log("  config            Show current configuration");
   console.log("  version           Show version");
@@ -118,6 +119,43 @@ async function main(): Promise<void> {
       };
 
       ask();
+      break;
+    }
+
+    case "gateway": {
+      printBanner();
+      const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (!telegramToken) {
+        console.error(chalk.red("TELEGRAM_BOT_TOKEN environment variable is required."));
+        console.log(chalk.gray("Set it in your .env file or export it."));
+        process.exit(1);
+      }
+
+      // Load tools
+      await import("../tools/terminal.js");
+      await import("../tools/file-tools.js");
+      await import("../tools/search-tools.js");
+      await import("../tools/skills-tool.js");
+      await import("../tools/kanban-tools.js");
+      await import("../tools/cron-tools.js");
+
+      const { GatewayRunner } = await import("../gateway/runner.js");
+      const { TelegramAdapter } = await import("../gateway/platforms/telegram.js");
+
+      const telegram = new TelegramAdapter(telegramToken);
+      const gateway = new GatewayRunner({
+        adapters: [telegram],
+      });
+
+      console.log(chalk.cyan("Starting gateway..."));
+      await gateway.start();
+      console.log(chalk.green("Gateway is running. Press Ctrl+C to stop."));
+
+      process.on("SIGINT", async () => {
+        console.log(chalk.yellow("\nShutting down..."));
+        await gateway.stop();
+        process.exit(0);
+      });
       break;
     }
 
