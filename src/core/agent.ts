@@ -7,6 +7,7 @@ import { buildSystemPrompt } from "./system-prompt.js";
 import { IterationBudget } from "./iteration-budget.js";
 import { logger } from "./logger.js";
 import { toolRegistry } from "../tools/registry.js";
+import { SessionDB } from "../memory/session-db.js";
 
 export interface AgentOptions {
   model?: string;
@@ -15,6 +16,7 @@ export interface AgentOptions {
   systemPrompt?: string;
   maxIterations?: number;
   workdir?: string;
+  sessionId?: string;
 }
 
 export interface AgentCallbacks {
@@ -32,10 +34,12 @@ export class Agent {
   private systemPrompt: string;
   private config: AppConfig;
   private callbacks: AgentCallbacks;
+  private sessionDB: SessionDB;
 
   constructor(options: AgentOptions = {}) {
     this.config = getConfig();
-    this.sessionId = randomUUID();
+    this.sessionId = options.sessionId ?? randomUUID();
+    this.sessionDB = new SessionDB();
 
     const providerName = options.provider ?? this.config.provider;
     const profile = getProviderProfile(providerName);
@@ -56,6 +60,31 @@ export class Agent {
     this.messages = [{ role: "system", content: this.systemPrompt }];
     this.callbacks = {};
 
+    // Create or load session
+    const existing = this.sessionDB.getSession(this.sessionId);
+    if (!existing) {
+      this.sessionDB.createSession(this.sessionId, "cli", this.config.model);
+    } else {
+      // Load existing messages
+      const saved = this.sessionDB.getMessages(this.sessionId);
+      if (saved.length > 0) {
+        this.messages = [{ role: "system", content: this.systemPrompt }];
+        for (const msg of saved) {
+          const llmMsg: LLMMessage = {
+            role: msg.role as LLMMessage["role"],
+            content: msg.content,
+          };
+          if (msg.toolCalls) {
+            llmMsg.tool_calls = JSON.parse(msg.toolCalls);
+          }
+          if (msg.toolCallId) {
+            llmMsg.tool_call_id = msg.toolCallId;
+          }
+          this.messages.push(llmMsg);
+        }
+      }
+    }
+
     logger.info(`Agent created: session=${this.sessionId} model=${this.config.model}`);
   }
 
@@ -69,6 +98,7 @@ export class Agent {
 
   async chat(userMessage: string): Promise<string> {
     this.messages.push({ role: "user", content: userMessage });
+    this.sessionDB.addMessage(this.sessionId, "user", userMessage);
 
     let finalResponse = "";
     const tools = this.getTools();
@@ -79,15 +109,25 @@ export class Agent {
       const response = await this.client.chat(this.messages, tools.length > 0 ? tools : undefined);
 
       // Add assistant message
+      const assistantContent = response.content ?? "";
+      const assistantToolCalls = response.tool_calls.length > 0 ? response.tool_calls : undefined;
+
       this.messages.push({
         role: "assistant",
-        content: response.content ?? "",
-        tool_calls: response.tool_calls.length > 0 ? response.tool_calls : undefined,
+        content: assistantContent,
+        tool_calls: assistantToolCalls,
       });
+
+      this.sessionDB.addMessage(
+        this.sessionId,
+        "assistant",
+        assistantContent,
+        assistantToolCalls ? JSON.stringify(assistantToolCalls) : undefined
+      );
 
       // If no tool calls, we're done
       if (response.tool_calls.length === 0) {
-        finalResponse = response.content ?? "";
+        finalResponse = assistantContent;
         break;
       }
 
@@ -112,11 +152,13 @@ export class Agent {
         this.callbacks.onToolComplete?.(toolCall.function.name, result);
         logger.debug(`Tool ${toolCall.function.name} result: ${result.slice(0, 200)}`);
 
-        this.messages.push({
+        const toolMsg: LLMMessage = {
           role: "tool",
           tool_call_id: toolCall.id,
           content: result,
-        });
+        };
+        this.messages.push(toolMsg);
+        this.sessionDB.addMessage(this.sessionId, "tool", result, undefined, toolCall.id);
       }
     }
 
@@ -131,5 +173,13 @@ export class Agent {
 
   getHistory(): LLMMessage[] {
     return [...this.messages];
+  }
+
+  searchMemory(query: string): Array<{ sessionId: string; role: string; content: string }> {
+    return this.sessionDB.search(query);
+  }
+
+  close(): void {
+    this.sessionDB.close();
   }
 }
