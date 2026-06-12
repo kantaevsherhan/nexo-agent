@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import chalk from "chalk";
+import * as readline from "readline";
 
 const VERSION = "0.1.0";
 
@@ -52,10 +53,69 @@ async function main(): Promise<void> {
       printUsage();
       break;
 
-    case "chat":
+    case "chat": {
       printBanner();
-      console.log(chalk.gray("Chat mode — coming in Phase 3"));
+      // Load tools
+      await import("../tools/terminal.js");
+      await import("../tools/file-tools.js");
+
+      const { Agent } = await import("../core/agent.js");
+      const agent = new Agent({
+        model: args.includes("--model") ? args[args.indexOf("--model") + 1] : undefined,
+        provider: args.includes("--provider") ? args[args.indexOf("--provider") + 1] : undefined,
+      });
+
+      agent.setCallbacks({
+        onToolStart: (name, _args) => {
+          console.log(chalk.gray(`\n  [tool] ${name}...`));
+        },
+        onToolComplete: (name, _result) => {
+          console.log(chalk.gray(`  [tool] ${name} done`));
+        },
+        onStatus: (status) => {
+          console.log(chalk.gray(`  ${status}`));
+        },
+      });
+
+      const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+      });
+
+      console.log(chalk.cyan("Chat started. Type your message (Ctrl+C to exit).\n"));
+
+      const ask = (): void => {
+        rl.question(chalk.green("You: "), async (input) => {
+          const trimmed = input.trim();
+          if (!trimmed) {
+            ask();
+            return;
+          }
+          if (trimmed === "/quit" || trimmed === "/exit") {
+            rl.close();
+            process.exit(0);
+          }
+          if (trimmed === "/reset") {
+            agent.reset();
+            console.log(chalk.yellow("Session reset.\n"));
+            ask();
+            return;
+          }
+
+          try {
+            process.stdout.write(chalk.cyan("\nAgent: "));
+            await agent.chat(trimmed);
+            console.log("\n");
+          } catch (err) {
+            console.error(chalk.red(`\nError: ${err instanceof Error ? err.message : err}\n`));
+          }
+          ask();
+        });
+      };
+
+      ask();
       break;
+    }
 
     case "test-stream": {
       printBanner();
