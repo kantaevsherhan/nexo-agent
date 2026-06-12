@@ -1,4 +1,8 @@
-# nexo-agent
+<h1 align="center">Nexo Agent</h1>
+
+<p align="center">
+  <img src=".github/images/banner.png" alt="NexoAgent" width="700">
+</p>
 
 Node.js/TypeScript agent inspired by Hermes Agent.
 
@@ -71,14 +75,14 @@ OPENAI_API_KEY=your_key
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `nexo chat` | Start interactive chat |
-| `nexo tui` | Start modern TUI interface |
+| Command        | Description                            |
+| -------------- | -------------------------------------- |
+| `nexo chat`    | Start interactive chat                 |
+| `nexo tui`     | Start modern TUI interface             |
 | `nexo gateway` | Start gateway with messaging platforms |
-| `nexo rpc` | Start RPC server for tool calling |
-| `nexo config` | Show current configuration |
-| `nexo version` | Show version |
+| `nexo rpc`     | Start RPC server for tool calling      |
+| `nexo config`  | Show current configuration             |
+| `nexo version` | Show version                           |
 
 ## Development
 
