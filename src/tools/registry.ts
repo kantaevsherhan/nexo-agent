@@ -41,10 +41,15 @@ const TOOLSETS: Record<string, ToolsetDefinition> = {
     tools: ["kanban_create", "kanban_list", "kanban_complete", "kanban_block", "kanban_show"],
     includes: [],
   },
+  cron: {
+    description: "Cron scheduling tools",
+    tools: ["cron_create", "cron_list", "cron_delete", "cron_pause", "cron_resume"],
+    includes: [],
+  },
   core: {
     description: "Core agent tools",
     tools: [],
-    includes: ["terminal", "file", "search", "skills", "kanban"],
+    includes: ["terminal", "file", "search", "skills", "kanban", "cron"],
   },
 };
 
