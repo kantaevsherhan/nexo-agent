@@ -36,10 +36,15 @@ const TOOLSETS: Record<string, ToolsetDefinition> = {
     tools: ["skills_list", "skill_view", "skill_create", "skill_apply"],
     includes: [],
   },
+  kanban: {
+    description: "Kanban task management tools",
+    tools: ["kanban_create", "kanban_list", "kanban_complete", "kanban_block", "kanban_show"],
+    includes: [],
+  },
   core: {
     description: "Core agent tools",
     tools: [],
-    includes: ["terminal", "file", "search", "skills"],
+    includes: ["terminal", "file", "search", "skills", "kanban"],
   },
 };
 
