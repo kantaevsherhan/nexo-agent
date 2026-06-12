@@ -19,6 +19,7 @@ function printUsage(): void {
   console.log("  nexo [command] [options]");
   console.log();
   console.log(chalk.white("Commands:"));
+  console.log("  setup             First-time project setup wizard");
   console.log("  chat              Start interactive chat (default)");
   console.log("  tui               Start modern TUI interface");
   console.log("  gateway           Start gateway with messaging platforms");
@@ -55,6 +56,13 @@ async function main(): Promise<void> {
       printBanner();
       printUsage();
       break;
+
+    case "setup": {
+      printBanner();
+      const { runSetup } = await import("./setup.js");
+      await runSetup();
+      break;
+    }
 
     case "chat": {
       printBanner();
