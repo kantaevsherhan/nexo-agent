@@ -21,6 +21,7 @@ function printUsage(): void {
   console.log(chalk.white("Commands:"));
   console.log("  chat              Start interactive chat (default)");
   console.log("  gateway           Start gateway with messaging platforms");
+  console.log("  rpc               Start RPC server for tool calling");
   console.log("  test-stream       Test LLM streaming connection");
   console.log("  config            Show current configuration");
   console.log("  version           Show version");
@@ -156,6 +157,13 @@ async function main(): Promise<void> {
         await gateway.stop();
         process.exit(0);
       });
+      break;
+    }
+
+    case "rpc": {
+      printBanner();
+      const { startRPCServer } = await import("../rpc/server.js");
+      startRPCServer();
       break;
     }
 
