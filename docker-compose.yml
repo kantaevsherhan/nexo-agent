@@ -1,0 +1,32 @@
+services:
+  agent:
+    build: .
+    volumes:
+      - nexo-data:/app/data
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+
+  cron:
+    build: .
+    volumes:
+      - nexo-data:/app/data
+    env_file:
+      - .env
+    command: ["cron"]
+    restart: unless-stopped
+
+  gateway:
+    build: .
+    volumes:
+      - nexo-data:/app/data
+    env_file:
+      - .env
+    command: ["gateway"]
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+
+volumes:
+  nexo-data:

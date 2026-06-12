@@ -37,6 +37,9 @@ export class JobsStore {
     try {
       const data = JSON.parse(readFileSync(this.filePath, "utf-8")) as CronJob[];
       for (const job of data) {
+        if (job.status === "running") {
+          job.status = "scheduled";
+        }
         this.jobs.set(job.id, job);
       }
     } catch {

@@ -23,6 +23,7 @@ function printUsage(): void {
   console.log("  chat              Start interactive chat (default)");
   console.log("  tui               Start modern TUI interface");
   console.log("  gateway           Start gateway with messaging platforms");
+  console.log("  cron              Start cron scheduler (standalone, no Telegram)");
   console.log("  rpc               Start RPC server for tool calling");
   console.log("  test-stream       Test LLM streaming connection");
   console.log("  config            Show current configuration");
@@ -144,6 +145,9 @@ async function main(): Promise<void> {
 
     case "gateway": {
       printBanner();
+      const { getConfig: getGatewayConfig } = await import("../core/config.js");
+      getGatewayConfig(); // load .env before reading env vars
+
       const telegramToken = process.env.TELEGRAM_BOT_TOKEN;
       if (!telegramToken) {
         console.error(chalk.red("TELEGRAM_BOT_TOKEN environment variable is required."));
@@ -174,6 +178,57 @@ async function main(): Promise<void> {
       process.on("SIGINT", async () => {
         console.log(chalk.yellow("\nShutting down..."));
         await gateway.stop();
+        process.exit(0);
+      });
+      break;
+    }
+
+    case "cron": {
+      printBanner();
+      const { getConfig: getCronConfig } = await import("../core/config.js");
+      getCronConfig(); // load .env
+
+      await import("../tools/terminal.js");
+      await import("../tools/file-tools.js");
+      await import("../tools/search-tools.js");
+      await import("../tools/skills-tool.js");
+      await import("../tools/kanban-tools.js");
+      await import("../tools/cron-tools.js");
+
+      const { CronScheduler } = await import("../cron/scheduler.js");
+      const { Agent } = await import("../core/agent.js");
+
+      const scheduler = new CronScheduler(async (job) => {
+        const agent = new Agent({
+          sessionId: `cron-${job.id}`,
+          model: job.model,
+          provider: job.provider,
+          workdir: job.workdir,
+        });
+        console.log(chalk.cyan(`Running job: ${job.name}`));
+        try {
+          const result = await agent.chat(job.prompt);
+          console.log(chalk.green(`Job "${job.name}" completed.`));
+          if (result) console.log(chalk.gray(result.slice(0, 500)));
+        } catch (err) {
+          console.error(chalk.red(`Job "${job.name}" failed: ${err instanceof Error ? err.message : err}`));
+        } finally {
+          agent.close();
+        }
+      });
+
+      scheduler.start();
+      const jobs = scheduler.getStore().listJobs();
+      const enabled = jobs.filter((j) => j.enabled && j.status === "scheduled");
+      console.log(chalk.green(`Cron started. ${enabled.length} job(s) scheduled.`));
+      for (const job of enabled) {
+        console.log(chalk.gray(`  - "${job.name}" [${job.schedule}]`));
+      }
+      console.log(chalk.gray("Press Ctrl+C to stop.\n"));
+
+      process.on("SIGINT", () => {
+        console.log(chalk.yellow("\nStopping cron..."));
+        scheduler.stop();
         process.exit(0);
       });
       break;
