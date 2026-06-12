@@ -58,6 +58,7 @@ async function main(): Promise<void> {
       // Load tools
       await import("../tools/terminal.js");
       await import("../tools/file-tools.js");
+      await import("../tools/search-tools.js");
 
       const { Agent } = await import("../core/agent.js");
       const agent = new Agent({

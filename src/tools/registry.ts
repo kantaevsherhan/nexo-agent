@@ -9,6 +9,35 @@ export interface ToolEntry {
   handler: ToolHandler;
 }
 
+export interface ToolsetDefinition {
+  description: string;
+  tools: string[];
+  includes: string[];
+}
+
+const TOOLSETS: Record<string, ToolsetDefinition> = {
+  terminal: {
+    description: "Terminal execution tools",
+    tools: ["terminal"],
+    includes: [],
+  },
+  file: {
+    description: "File system tools",
+    tools: ["read_file", "write_file", "list_directory"],
+    includes: [],
+  },
+  search: {
+    description: "Search tools",
+    tools: ["search_files"],
+    includes: [],
+  },
+  core: {
+    description: "Core agent tools",
+    tools: [],
+    includes: ["terminal", "file", "search"],
+  },
+};
+
 class ToolRegistryImpl {
   private tools = new Map<string, ToolEntry>();
 
@@ -24,8 +53,29 @@ class ToolRegistryImpl {
     return this.tools.get(name);
   }
 
-  getDefinitions(): ToolDefinition[] {
-    return Array.from(this.tools.values()).map((t) => t.schema);
+  getDefinitions(toolsets?: string[]): ToolDefinition[] {
+    const names = this.resolveToolNames(toolsets);
+    return Array.from(names)
+      .map((name) => this.tools.get(name))
+      .filter((e): e is ToolEntry => e !== undefined)
+      .map((t) => t.schema);
+  }
+
+  private resolveToolNames(toolsets?: string[]): Set<string> {
+    const result = new Set<string>();
+    const sets = toolsets ?? Object.keys(TOOLSETS);
+
+    for (const setName of sets) {
+      const def = TOOLSETS[setName];
+      if (!def) continue;
+      for (const tool of def.tools) result.add(tool);
+      for (const included of def.includes) {
+        for (const tool of this.resolveToolNames([included])) {
+          result.add(tool);
+        }
+      }
+    }
+    return result;
   }
 
   list(): ToolEntry[] {
@@ -34,6 +84,10 @@ class ToolRegistryImpl {
 
   has(name: string): boolean {
     return this.tools.has(name);
+  }
+
+  getToolsets(): Record<string, ToolsetDefinition> {
+    return { ...TOOLSETS };
   }
 }
 
