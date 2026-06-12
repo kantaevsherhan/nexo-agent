@@ -19,6 +19,7 @@ function printUsage(): void {
   console.log();
   console.log(chalk.white("Commands:"));
   console.log("  chat              Start interactive chat (default)");
+  console.log("  test-stream       Test LLM streaming connection");
   console.log("  config            Show current configuration");
   console.log("  version           Show version");
   console.log("  help              Show this help message");
@@ -55,6 +56,40 @@ async function main(): Promise<void> {
       printBanner();
       console.log(chalk.gray("Chat mode — coming in Phase 3"));
       break;
+
+    case "test-stream": {
+      printBanner();
+      const { getConfig } = await import("../core/config.js");
+      const { getProviderProfile } = await import("../providers/registry.js");
+      const { LLMClient } = await import("../providers/llm-client.js");
+      const config = getConfig();
+      const profile = getProviderProfile(config.provider);
+      if (!profile) {
+        console.error(chalk.red(`Unknown provider: ${config.provider}`));
+        process.exit(1);
+      }
+      try {
+        const client = new LLMClient({
+          profile,
+          model: config.model,
+          apiKey: config.apiKey,
+          maxTokens: config.maxTokens,
+          temperature: config.temperature,
+        });
+        console.log(chalk.gray(`Connecting to ${config.provider} (${config.model})...`));
+        const messages = [{ role: "user" as const, content: "Say hello in one sentence." }];
+        const stream = client.chatStream(messages);
+        for await (const token of stream) {
+          process.stdout.write(token);
+        }
+        console.log();
+        console.log(chalk.green("\nStream completed."));
+      } catch (err) {
+        console.error(chalk.red("Error:"), err instanceof Error ? err.message : err);
+        process.exit(1);
+      }
+      break;
+    }
 
     case "config":
       printBanner();
